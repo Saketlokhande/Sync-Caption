@@ -2,10 +2,27 @@
 # Node 20+ required for OpenAI SDK File API support
 FROM node:20-bullseye
 
-# Install FFMPEG (required for video processing)
+# Install FFMPEG and Chrome dependencies (required for video processing and Remotion rendering)
 RUN apt-get update && \
-    apt-get install -y ffmpeg && \
-    apt-get clean && \
+    apt-get install -y \
+    ffmpeg \
+    # Chrome/Chromium dependencies for Remotion
+    libnss3 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libdbus-1-3 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libpango-1.0-0 \
+    libcairo2 \
+    && apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 # Set working directory
