@@ -48,20 +48,6 @@ async function getBundle(): Promise<string> {
 // Export getBundle for pre-bundling at startup
 export { getBundle };
 
-// Timeout wrapper function
-function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  errorMessage: string
-): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
-    ),
-  ]);
-}
-
 router.post("/", async (req, res) => {
   const { videoUrl, captions, style, duration, dimensions } = req.body;
 
@@ -72,8 +58,7 @@ router.post("/", async (req, res) => {
   // Extract input filename from videoUrl for verification
   const inputFilename = videoUrl.split("/").pop() || "";
 
-  // Optimize video URL for faster access
-  // Use localhost/internal URL instead of external HTTP (much faster)
+  // Convert to localhost URL for faster access (much faster than external HTTP)
   let videoUrlForRemotion = videoUrl;
   if (videoUrl.includes("/uploads/")) {
     const localVideoPath = path.join(
@@ -84,20 +69,11 @@ router.post("/", async (req, res) => {
     if (!fs.existsSync(localVideoPath)) {
       return res.status(404).json({ error: "Video file not found on server" });
     }
-
-    // Use localhost/internal URL for faster access
-    // Works in both local dev and Docker/production (same container)
+    // Use localhost URL - MUCH faster than external URL
     const port = process.env.PORT || 8000;
-    const isProduction = process.env.NODE_ENV === "production";
-
-    // In production (Docker), use 127.0.0.1 or localhost (both work in same container)
-    // In local dev, localhost works perfectly
-    // This avoids external HTTP requests and network latency
-    videoUrlForRemotion = `http://127.0.0.1:${port}/uploads/${inputFilename}`;
+    videoUrlForRemotion = `http://localhost:${port}/uploads/${inputFilename}`;
     console.log(
-      `Using internal URL for faster access (${
-        isProduction ? "production" : "local"
-      }): ${videoUrlForRemotion}`
+      `Using localhost URL for faster access: ${videoUrlForRemotion}`
     );
   }
 
@@ -106,34 +82,27 @@ router.post("/", async (req, res) => {
     console.log("Starting render request...");
     const startTime = Date.now();
 
+    // Calculate duration in frames (30 fps)
     const durationInFrames = duration ? Math.ceil(duration * 30) : 300;
 
-    // 1. Get bundle (cached, only bundles once) - with timeout
+    // 1. Get bundle (cached, only bundles once)
     console.log("Getting bundle...");
     const bundleStartTime = Date.now();
-    const bundleLocation = await withTimeout(
-      getBundle(),
-      60000,
-      "Bundle creation timed out after 1 minute"
-    );
+    const bundleLocation = await getBundle();
     console.log(`Bundle retrieved in ${Date.now() - bundleStartTime}ms`);
 
-    // 2. Select composition - with timeout
+    // 2. Select composition with dynamic duration
     console.log("Selecting composition...");
     const compositionId = "CaptionedVideo";
-    const composition = await withTimeout(
-      selectComposition({
-        serveUrl: bundleLocation,
-        id: compositionId,
-        inputProps: {
-          videoUrl: videoUrlForRemotion,
-          captions,
-          style: style || "standard",
-        },
-      }),
-      30000,
-      "Composition selection timed out after 30 seconds"
-    );
+    const composition = await selectComposition({
+      serveUrl: bundleLocation,
+      id: compositionId,
+      inputProps: {
+        videoUrl: videoUrlForRemotion,
+        captions,
+        style: style || "standard",
+      },
+    });
     console.log(
       `Composition selected: ${compositionId}, duration: ${composition.durationInFrames} frames`
     );
@@ -163,32 +132,27 @@ router.post("/", async (req, res) => {
       `Starting render: ${durationInFrames} frames at ${composition.width}x${composition.height}`
     );
 
-    await withTimeout(
-      renderMedia({
-        composition,
-        serveUrl: bundleLocation,
-        codec: "h264",
-        outputLocation,
-        inputProps: {
-          videoUrl: videoUrlForRemotion,
-          captions,
-          style: style || "standard",
-        },
-        timeoutInMilliseconds: 300000,
-        concurrency: 2,
-        onProgress: ({ renderedFrames }) => {
-          const progress = (
-            (renderedFrames / composition.durationInFrames) *
-            100
-          ).toFixed(1);
+    await renderMedia({
+      composition,
+      serveUrl: bundleLocation,
+      codec: "h264",
+      outputLocation,
+      inputProps: {
+        videoUrl: videoUrlForRemotion,
+        captions,
+        style: style || "standard",
+      },
+      timeoutInMilliseconds: 900000, // 15 minutes timeout (to allow for longer renders)
+      concurrency: 1,
+      onProgress: ({ renderedFrames }) => {
+        if (renderedFrames % 30 === 0) {
+          // Log every second (30 fps)
           console.log(
-            `Render progress: ${renderedFrames}/${composition.durationInFrames} frames (${progress}%)`
+            `Render progress: ${renderedFrames}/${composition.durationInFrames} frames`
           );
-        },
-      }),
-      240000,
-      "Video rendering timed out after 4 minutes"
-    );
+        }
+      },
+    });
 
     const renderTime = Date.now() - renderStartTime;
     const totalTime = Date.now() - startTime;
