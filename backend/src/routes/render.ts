@@ -6,6 +6,49 @@ import fs from "fs";
 
 const router = express.Router();
 
+// Cache the bundle location to avoid rebundling on every request
+let cachedBundleLocation: string | null = null;
+let bundlePromise: Promise<string> | null = null;
+
+// Function to get or create bundle (cached)
+async function getBundle(): Promise<string> {
+  // If bundle exists and is valid, return it
+  if (cachedBundleLocation && fs.existsSync(cachedBundleLocation)) {
+    return cachedBundleLocation;
+  }
+
+  // If bundle is in progress, wait for it
+  if (bundlePromise) {
+    return bundlePromise;
+  }
+
+  // Create new bundle
+  console.log("Bundling Remotion composition...");
+  const entryPoint = path.join(__dirname, "../remotion/index.ts");
+
+  bundlePromise = bundle({
+    entryPoint,
+    webpackOverride: (config) => config,
+    // Optimize bundle for production
+    publicDir: undefined,
+  })
+    .then((location) => {
+      cachedBundleLocation = location;
+      bundlePromise = null;
+      console.log(`Bundle created: ${location}`);
+      return location;
+    })
+    .catch((error) => {
+      bundlePromise = null;
+      throw error;
+    });
+
+  return bundlePromise;
+}
+
+// Export getBundle for pre-bundling at startup
+export { getBundle };
+
 router.post("/", async (req, res) => {
   const { videoUrl, captions, style, duration, dimensions } = req.body;
 
@@ -33,17 +76,20 @@ router.post("/", async (req, res) => {
 
   let outputFilename = "";
   try {
+    console.log("Starting render request...");
+    const startTime = Date.now();
+
     // Calculate duration in frames (30 fps)
     const durationInFrames = duration ? Math.ceil(duration * 30) : 300;
 
-    // 1. Bundle the composition
-    const entryPoint = path.join(__dirname, "../remotion/index.ts");
-    const bundleLocation = await bundle({
-      entryPoint,
-      webpackOverride: (config) => config,
-    });
+    // 1. Get bundle (cached, only bundles once)
+    console.log("Getting bundle...");
+    const bundleStartTime = Date.now();
+    const bundleLocation = await getBundle();
+    console.log(`Bundle retrieved in ${Date.now() - bundleStartTime}ms`);
 
     // 2. Select composition with dynamic duration
+    console.log("Selecting composition...");
     const compositionId = "CaptionedVideo";
     const composition = await selectComposition({
       serveUrl: bundleLocation,
@@ -63,6 +109,7 @@ router.post("/", async (req, res) => {
     }
 
     // 3. Render
+    console.log("Starting video render...");
     outputFilename = `output-${Date.now()}.mp4`;
     const outputLocation = path.join(
       __dirname,
@@ -74,6 +121,7 @@ router.post("/", async (req, res) => {
       fs.mkdirSync(path.dirname(outputLocation), { recursive: true });
     }
 
+    const renderStartTime = Date.now();
     await renderMedia({
       composition,
       serveUrl: bundleLocation,
@@ -84,18 +132,23 @@ router.post("/", async (req, res) => {
         captions,
         style: style || "standard",
       },
-      timeoutInMilliseconds: 120000, // 2 minutes timeout (increased from default 30s)
+      timeoutInMilliseconds: 300000, // 5 minutes timeout
       concurrency: 1,
+      onProgress: ({ renderedFrames, encodedFrames }) => {
+        if (renderedFrames % 30 === 0) {
+          // Log every second (30 fps)
+          console.log(
+            `Render progress: ${renderedFrames}/${composition.durationInFrames} frames`
+          );
+        }
+      },
     });
 
+    const renderTime = Date.now() - renderStartTime;
+    const totalTime = Date.now() - startTime;
+    console.log(`Render completed in ${renderTime}ms (total: ${totalTime}ms)`);
+
     const outputUrl = `/outputs/${outputFilename}`;
-
-    // Clean up input file after successful render (optional - can be done after download)
-    // Uncomment if you want to delete immediately after render:
-    // if (inputFilename) {
-    //   deleteUploadedFile(inputFilename);
-    // }
-
     res.json({ url: outputUrl, filename: outputFilename });
   } catch (error: any) {
     console.error("Rendering error:", error);

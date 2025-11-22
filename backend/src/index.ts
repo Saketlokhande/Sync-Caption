@@ -60,6 +60,30 @@ app.get("/health", (req, res) => {
   });
 });
 
+// Pre-bundle Remotion composition at startup (makes first render request faster)
+// This runs in background, so first request doesn't have to wait for bundling
+setTimeout(() => {
+  import("./routes/render")
+    .then(async (module) => {
+      try {
+        console.log("Pre-bundling Remotion composition in background...");
+        await module.getBundle();
+        console.log("Pre-bundling completed - first render will be faster");
+      } catch (err: any) {
+        console.warn(
+          "Pre-bundling failed (will bundle on first request):",
+          err.message
+        );
+      }
+    })
+    .catch((err) => {
+      console.warn(
+        "Could not load render module for pre-bundling:",
+        err.message
+      );
+    });
+}, 2000); // Wait 2 seconds after server starts
+
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
