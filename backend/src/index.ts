@@ -35,7 +35,19 @@ app.use(
 // Increase body size limit for file uploads (50MB)
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
-app.use(express.static(path.join(__dirname, "../public")));
+
+// Serve static files with proper headers for downloads
+app.use(
+  express.static(path.join(__dirname, "../public"), {
+    setHeaders: (res, filePath) => {
+      // Force download for video files in outputs directory
+      if (filePath.includes("outputs") && filePath.endsWith(".mp4")) {
+        res.setHeader("Content-Disposition", "attachment");
+        res.setHeader("Content-Type", "video/mp4");
+      }
+    },
+  })
+);
 
 // Routes
 app.use("/api/upload", uploadRoutes);

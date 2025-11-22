@@ -126,6 +126,25 @@ export default function Home() {
       ?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const handleDownload = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename || "captioned-video.mp4";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Download failed:", error);
+      // Fallback to direct link
+      window.open(url, "_blank");
+    }
+  };
+
   return (
     <main className="min-h-screen bg-background text-foreground relative overflow-x-hidden">
       {/* Jellyfish-Inspired Animated Background */}
@@ -432,11 +451,12 @@ export default function Home() {
                       <p className="text-center text-green-400 mb-2 font-medium text-sm">
                         Video ready!
                       </p>
-                      <a
-                        href={downloadUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block w-full text-center py-2 px-4 rounded-lg text-sm font-medium text-white transition-all duration-300"
+                      <button
+                        onClick={() => {
+                          const filename = downloadUrl.split("/").pop() || "captioned-video.mp4";
+                          handleDownload(downloadUrl, filename);
+                        }}
+                        className="block w-full text-center py-2 px-4 rounded-lg text-sm font-medium text-white transition-all duration-300 cursor-pointer"
                         style={{
                           background:
                             "linear-gradient(black, black) padding-box, linear-gradient(to right, #3b82f6, #a855f7, #ec4899) border-box",
@@ -445,7 +465,7 @@ export default function Home() {
                         }}
                       >
                         Download MP4
-                      </a>
+                      </button>
                     </div>
                   )}
                 </CardContent>
