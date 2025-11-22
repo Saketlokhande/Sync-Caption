@@ -23,6 +23,10 @@ COPY . .
 # Build TypeScript
 RUN npm run build
 
+# Copy Remotion source directory to dist - Remotion bundler needs source TSX/TS files
+# TypeScript compiles .ts but Remotion bundler processes source files directly
+RUN cp -r src/remotion dist/ 2>/dev/null || true
+
 # Remove devDependencies after build to reduce image size
 RUN npm prune --production
 
