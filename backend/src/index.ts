@@ -6,6 +6,17 @@ import uploadRoutes from "./routes/upload";
 import transcribeRoutes from "./routes/transcribe";
 import renderRoutes from "./routes/render";
 
+// Polyfill File API for Node.js < 20 (OpenAI SDK requirement)
+// This ensures OpenAI SDK works even if Node version doesn't have File globally
+if (typeof globalThis.File === "undefined") {
+  try {
+    const { File } = require("node:buffer");
+    globalThis.File = File;
+  } catch (e) {
+    console.warn("Could not polyfill File API. Node 20+ recommended.");
+  }
+}
+
 dotenv.config();
 
 const app = express();
@@ -21,7 +32,9 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+// Increase body size limit for file uploads (50MB)
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(express.static(path.join(__dirname, "../public")));
 
 // Routes
@@ -29,8 +42,22 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/transcribe", transcribeRoutes);
 app.use("/api/render", renderRoutes);
 
+// Health check endpoint
 app.get("/", (req, res) => {
-  res.send("Remotion Captioning Backend is running");
+  res.json({
+    status: "ok",
+    message: "Remotion Captioning Backend is running",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Health check for monitoring
+app.get("/health", (req, res) => {
+  res.json({
+    status: "healthy",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
 });
 
 app.listen(PORT, () => {

@@ -1,5 +1,6 @@
-# Use Node.js 18 with Debian (includes apt for FFMPEG installation)
-FROM node:18-bullseye
+# Use Node.js 20 LTS with Debian (includes apt for FFMPEG installation)
+# Node 20+ required for OpenAI SDK File API support
+FROM node:20-bullseye
 
 # Install FFMPEG (required for video processing)
 RUN apt-get update && \

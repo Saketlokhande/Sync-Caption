@@ -13,6 +13,10 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'Missing videoUrl or captions' });
   }
 
+  // Extract input filename from videoUrl (e.g., /uploads/filename.mp4)
+  const inputFilename = videoUrl.split('/').pop() || '';
+
+  let outputFilename = '';
   try {
     // Calculate duration in frames (30 fps)
     const durationInFrames = duration ? Math.ceil(duration * 30) : 300;
@@ -44,7 +48,7 @@ router.post('/', async (req, res) => {
     }
 
     // 3. Render
-    const outputFilename = `output-${Date.now()}.mp4`;
+    outputFilename = `output-${Date.now()}.mp4`;
     const outputLocation = path.join(__dirname, '../../public/outputs', outputFilename);
     
     if (!fs.existsSync(path.dirname(outputLocation))) {
@@ -64,7 +68,14 @@ router.post('/', async (req, res) => {
     });
 
     const outputUrl = `/outputs/${outputFilename}`;
-    res.json({ url: outputUrl });
+    
+    // Clean up input file after successful render (optional - can be done after download)
+    // Uncomment if you want to delete immediately after render:
+    // if (inputFilename) {
+    //   deleteUploadedFile(inputFilename);
+    // }
+    
+    res.json({ url: outputUrl, filename: outputFilename });
 
   } catch (error: any) {
     console.error('Rendering error:', error);
