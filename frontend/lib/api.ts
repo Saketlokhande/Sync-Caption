@@ -25,7 +25,8 @@ export const renderVideo = async (
   captions: Caption[],
   style: string,
   duration: number,
-  dimensions: { width: number; height: number }
+  dimensions: { width: number; height: number },
+  brollSegments?: BrollSegment[]
 ) => {
   const response = await axios.post(`${API_URL}/render`, {
     videoUrl,
@@ -33,6 +34,66 @@ export const renderVideo = async (
     style,
     duration,
     dimensions,
+    brollSegments,
+  });
+  return response.data;
+};
+
+export interface PexelsVideo {
+  id: number;
+  width: number;
+  height: number;
+  duration: number;
+  image: string;
+  video_files: Array<{
+    id: number;
+    quality: string;
+    file_type: string;
+    width: number;
+    height: number;
+    link: string;
+    fps: number;
+  }>;
+  video_pictures: Array<{
+    id: number;
+    picture: string;
+    nr: number;
+  }>;
+}
+
+export interface PexelsSearchResponse {
+  videos: PexelsVideo[];
+  page: number;
+  per_page: number;
+  total_results: number;
+  next_page?: number;
+}
+
+export interface BrollSegment {
+  videoUrl: string;
+  startMinutes: number;
+  startSeconds: number;
+  endMinutes: number;
+  endSeconds: number;
+}
+
+export const searchPexelsVideos = async (
+  query: string,
+  page: number = 1,
+  perPage: number = 15
+): Promise<PexelsSearchResponse> => {
+  const response = await axios.get(`${API_URL}/pexels/search`, {
+    params: { query, page, per_page: perPage },
+  });
+  return response.data;
+};
+
+export const getPopularPexelsVideos = async (
+  page: number = 1,
+  perPage: number = 15
+): Promise<PexelsSearchResponse> => {
+  const response = await axios.get(`${API_URL}/pexels/popular`, {
+    params: { page, per_page: perPage },
   });
   return response.data;
 };

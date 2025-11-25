@@ -8,9 +8,16 @@ interface PlayerProps {
   videoUrl: string;
   captions: any[];
   style: 'standard' | 'news' | 'karaoke';
+  brollSegments?: Array<{
+    videoUrl: string;
+    startMinutes: number;
+    startSeconds: number;
+    endMinutes: number;
+    endSeconds: number;
+  }>;
 }
 
-export const RemotionPlayer: React.FC<PlayerProps> = ({ videoUrl, captions, style }) => {
+export const RemotionPlayer: React.FC<PlayerProps> = ({ videoUrl, captions, style, brollSegments }) => {
   const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: number }>({
     width: 1080,
     height: 1920,
@@ -56,6 +63,7 @@ export const RemotionPlayer: React.FC<PlayerProps> = ({ videoUrl, captions, styl
           videoUrl,
           captions,
           style,
+          brollSegments: brollSegments || [],
         }}
         durationInFrames={videoDuration}
         compositionWidth={videoDimensions.width}

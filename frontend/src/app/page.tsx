@@ -9,7 +9,7 @@ import {
   AlertCircle,
   ChevronDown,
 } from "lucide-react";
-import { uploadVideo, transcribeVideo, renderVideo } from "../../lib/api";
+import { uploadVideo, transcribeVideo, renderVideo, BrollSegment, PexelsVideo } from "../../lib/api";
 import { RemotionPlayer } from "../../components/Player";
 import { Button } from "../components/ui/Button";
 import {
@@ -20,6 +20,8 @@ import {
 } from "../components/ui/Card";
 import { FileUpload } from "../components/ui/FileUpload";
 import { Jellyfish } from "../components/ui/Jellyfish";
+import { PexelsSearch } from "../components/ui/PexelsSearch";
+import { BrollEditor } from "../components/ui/BrollEditor";
 
 const BACKEND_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") ||
@@ -42,6 +44,9 @@ export default function Home() {
     width: number;
     height: number;
   }>({ width: 1080, height: 1920 });
+  const [selectedPexelsVideo, setSelectedPexelsVideo] = useState<PexelsVideo | null>(null);
+  const [brollSegments, setBrollSegments] = useState<BrollSegment[]>([]);
+  const [renderedVideoFilename, setRenderedVideoFilename] = useState<string>("");
 
   const handleFileSelect = async (selectedFile: File) => {
     setFile(selectedFile);
@@ -78,14 +83,21 @@ export default function Home() {
   };
 
   const handleTranscribe = async () => {
-    if (!filename) return;
+    // Use rendered video filename if available (for re-transcription), otherwise use original filename
+    const videoToTranscribe = renderedVideoFilename || filename;
+    if (!videoToTranscribe) return;
+    
     setLoading(true);
     setStatus("Generating captions...");
     setError("");
     try {
-      const result = await transcribeVideo(filename);
+      const result = await transcribeVideo(videoToTranscribe);
       setCaptions(result.captions);
       setStatus("Transcription complete");
+      // Clear rendered video filename after transcription so next render uses original
+      if (renderedVideoFilename) {
+        setRenderedVideoFilename("");
+      }
     } catch (error) {
       console.error(error);
       setError("Failed to transcribe video.");
@@ -107,9 +119,11 @@ export default function Home() {
         captions,
         style,
         videoDuration,
-        videoDimensions
+        videoDimensions,
+        brollSegments.length > 0 ? brollSegments : undefined
       );
       setDownloadUrl(`${BACKEND_BASE_URL}${result.url}`);
+      setRenderedVideoFilename(result.filename);
       setStatus("Render complete");
     } catch (error) {
       console.error(error);
@@ -345,7 +359,45 @@ export default function Home() {
                 </CardContent>
               </Card>
 
-              {/* Step 2: Transcribe */}
+              {/* Step 2: Search Pexels */}
+              <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-orange-500/20 text-orange-400 text-xs font-bold">
+                      2
+                    </div>
+                    Search Pexels Videos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <PexelsSearch
+                    onVideoSelect={(video) => setSelectedPexelsVideo(video)}
+                    selectedVideoId={selectedPexelsVideo?.id}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Step 3: Add B-roll */}
+              <Card className="border-white/10 bg-white/5 backdrop-blur-xl">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-500/20 text-yellow-400 text-xs font-bold">
+                      3
+                    </div>
+                    Add B-roll Segments
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <BrollEditor
+                    brollSegments={brollSegments}
+                    onSegmentsChange={setBrollSegments}
+                    selectedVideo={selectedPexelsVideo}
+                    onVideoSelect={setSelectedPexelsVideo}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Step 4: Transcribe */}
               <Card
                 className={`border-white/10 bg-white/5 backdrop-blur-xl transition-opacity duration-300 ${
                   !filename ? "opacity-50 pointer-events-none" : "opacity-100"
@@ -354,7 +406,7 @@ export default function Home() {
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <div className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 text-xs font-bold">
-                      2
+                      4
                     </div>
                     Generate Captions
                   </CardTitle>
@@ -369,12 +421,19 @@ export default function Home() {
                     {!loading && <Wand2 className="mr-2 w-4 h-4" />}
                     {loading && status === "Generating captions..."
                       ? "Transcribing..."
+                      : renderedVideoFilename
+                      ? "Re-transcribe Final Video"
                       : "Auto-Generate Captions"}
                   </Button>
+                  {renderedVideoFilename && (
+                    <p className="mt-2 text-xs text-muted-foreground text-center">
+                      Will transcribe the rendered video with B-roll
+                    </p>
+                  )}
                 </CardContent>
               </Card>
 
-              {/* Step 3: Style */}
+              {/* Step 5: Style */}
               <Card
                 className={`border-white/10 bg-white/5 backdrop-blur-xl transition-opacity duration-300 ${
                   captions.length === 0
@@ -385,7 +444,7 @@ export default function Home() {
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <div className="flex items-center justify-center w-6 h-6 rounded-full bg-pink-500/20 text-pink-400 text-xs font-bold">
-                      3
+                      5
                     </div>
                     Choose Style
                   </CardTitle>
@@ -417,7 +476,7 @@ export default function Home() {
                 </CardContent>
               </Card>
 
-              {/* Step 4: Export */}
+              {/* Step 6: Export */}
               <Card
                 className={`border-white/10 bg-white/5 backdrop-blur-xl transition-opacity duration-300 ${
                   captions.length === 0
@@ -428,7 +487,7 @@ export default function Home() {
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-base">
                     <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-500/20 text-green-400 text-xs font-bold">
-                      4
+                      6
                     </div>
                     Export
                   </CardTitle>
@@ -491,6 +550,7 @@ export default function Home() {
                         videoUrl={videoUrl}
                         captions={captions}
                         style={style}
+                        brollSegments={brollSegments}
                       />
                     ) : (
                       <div className="aspect-[9/16] w-full bg-secondary/20 flex flex-col items-center justify-center text-muted-foreground gap-3">

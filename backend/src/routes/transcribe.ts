@@ -14,10 +14,14 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'Filename is required' });
   }
 
-  const filePath = path.join(__dirname, '../../public/uploads', filename);
+  // Check both uploads and outputs directories
+  let filePath = path.join(__dirname, '../../public/uploads', filename);
+  if (!fs.existsSync(filePath)) {
+    filePath = path.join(__dirname, '../../public/outputs', filename);
+  }
 
   if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: 'File not found' });
+    return res.status(404).json({ error: 'File not found in uploads or outputs directory' });
   }
 
   try {

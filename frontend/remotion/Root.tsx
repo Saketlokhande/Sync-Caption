@@ -16,7 +16,8 @@ export const RemotionRoot: React.FC = () => {
         defaultProps={{
             videoUrl: '',
             captions: [],
-            style: 'standard'
+            style: 'standard',
+            brollSegments: []
         }}
       />
     </>

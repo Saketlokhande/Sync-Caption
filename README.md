@@ -5,12 +5,16 @@ A full-stack application that automatically generates and burns captions into vi
 ## 🚀 Features
 
 - **Video Upload**: Support for MP4 uploads (max 30 seconds).
+- **Pexels Video Search**: Search and select B-roll videos from Pexels library.
+- **B-roll Editing**: Add B-roll segments with precise time frame controls (minutes/seconds).
 - **AI Captioning**:
   - **Primary**: OpenAI Whisper API (High accuracy, word-level timestamps).
-- **Dynamic Rendering**: Server-side video rendering using Remotion.
+  - **Re-transcription**: Generate captions for final video after B-roll insertion.
+- **Dynamic Rendering**: Server-side video rendering using Remotion with B-roll support.
 - **Styles**: Choose from 'Standard', 'News', or 'Karaoke' caption styles.
 - **Hinglish Support**: Renders mixed Hindi/English text correctly.
-- **Real-time Preview**: View captions and styling before rendering.
+- **Real-time Preview**: View captions, B-roll, and styling before rendering.
+- **Export**: Download final video with captions and B-roll segments.
 
 ## 🛠️ Tech Stack
 
@@ -23,7 +27,9 @@ A full-stack application that automatically generates and burns captions into vi
 
 - **Node.js**: v18 or higher
 - **FFMPEG**: Must be installed on your system (required for rendering)
-- **API Keys**: OpenAI API Key
+- **API Keys**: 
+  - OpenAI API Key (for transcription)
+  - Pexels API Key (for video search) - Get one at https://www.pexels.com/api/
 
 ## ⚙️ Setup & Local Development
 
@@ -45,9 +51,12 @@ Create a `.env` file in the `backend` directory:
 
 ```env
 PORT=8000
-PORT=8000
 OPENAI_API_KEY=sk-your_openai_key_here
+PEXELS_API_KEY=your_pexels_api_key_here
+USE_MOCK_TRANSCRIPTION=false  # Set to 'true' to use mock transcription (no API key needed)
 ```
+
+**Note**: If you don't have a Pexels API key yet, the app will use a dummy key. Get your free API key at https://www.pexels.com/api/
 
 Start the backend server:
 
@@ -97,8 +106,18 @@ This project uses a flexible **API-based approach** for caption generation to en
 ## 📝 Usage
 
 1.  **Upload**: Select or drag & drop an MP4 video (max 30s).
-2.  **Transcribe**: Click "Generate Captions" to send to Whisper API.
-3.  **Style**: Select a caption style (Standard, News, Karaoke).
-4.  **Preview**: Watch the video with generated captions.
-5.  **Render**: Click "Render & Download" to process the final video.
-6.  **Download**: Click the download button to open the final video in a new tab for saving.
+2.  **Search Pexels** (Optional): Search for B-roll videos using keywords.
+3.  **Add B-roll** (Optional): Select a Pexels video and add time segments where B-roll should replace the original video.
+4.  **Transcribe**: Click "Generate Captions" to send to Whisper API (or "Re-transcribe Final Video" after rendering with B-roll).
+5.  **Style**: Select a caption style (Standard, News, Karaoke).
+6.  **Preview**: Watch the video with generated captions and B-roll segments.
+7.  **Render**: Click "Render & Download" to process the final video with captions and B-roll.
+8.  **Download**: Click the download button to save the final video.
+
+### Workflow Flexibility
+
+The workflow is flexible - you can:
+- Add B-roll before or after transcription
+- Transcribe the original video, then add B-roll and render
+- Add B-roll, render, then re-transcribe the final composite video
+- Export videos with or without B-roll segments

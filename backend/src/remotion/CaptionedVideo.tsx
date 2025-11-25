@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, Video, useCurrentFrame, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Video, Audio, useCurrentFrame, useVideoConfig, Sequence } from 'remotion';
 import { loadFont } from "@remotion/google-fonts/NotoSans";
 import { loadFont as loadDevanagari } from "@remotion/google-fonts/NotoSansDevanagari";
 
@@ -12,25 +12,83 @@ interface Caption {
   end: number;
 }
 
+interface BrollSegment {
+  videoUrl: string;
+  startMinutes: number;
+  startSeconds: number;
+  endMinutes: number;
+  endSeconds: number;
+}
+
 export interface CaptionedVideoProps {
   videoUrl: string;
   captions: Caption[];
   style: 'standard' | 'news' | 'karaoke';
+  brollSegments?: BrollSegment[];
 }
 
-export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({ videoUrl, captions, style }) => {
+export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({ 
+  videoUrl, 
+  captions, 
+  style,
+  brollSegments = []
+}) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const currentTime = frame / fps * 1000; // in ms
+  const currentTimeSeconds = frame / fps; // in seconds
+
+  // Find if current time is within a B-roll segment
+  const currentBrollSegment = brollSegments.find((segment) => {
+    const segmentStart = segment.startMinutes * 60 + segment.startSeconds;
+    const segmentEnd = segment.endMinutes * 60 + segment.endSeconds;
+    return currentTimeSeconds >= segmentStart && currentTimeSeconds < segmentEnd;
+  });
 
   const currentCaption = captions.find(
     (c) => currentTime >= c.start && currentTime <= c.end
   );
 
+  // Convert B-roll segments to frames for Sequence components
+  const brollSequences = brollSegments.map((segment, index) => {
+    const startSeconds = segment.startMinutes * 60 + segment.startSeconds;
+    const endSeconds = segment.endMinutes * 60 + segment.endSeconds;
+    const durationSeconds = endSeconds - startSeconds;
+    
+    return {
+      ...segment,
+      startFrame: Math.floor(startSeconds * fps),
+      durationInFrames: Math.ceil(durationSeconds * fps),
+    };
+  });
+
   return (
     <AbsoluteFill style={{ backgroundColor: 'black' }}>
-      {videoUrl && <Video src={videoUrl} />}
+      {/* Original video - always plays (for audio), but hidden during B-roll */}
+      {videoUrl && (
+        <Video 
+          src={videoUrl} 
+          style={{ 
+            opacity: currentBrollSegment ? 0 : 1,
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+          }}
+        />
+      )}
+
+      {/* B-roll segments - muted so original audio continues */}
+      {brollSequences.map((seq, index) => (
+        <Sequence
+          key={index}
+          from={seq.startFrame}
+          durationInFrames={seq.durationInFrames}
+        >
+          <Video src={seq.videoUrl} volume={0} />
+        </Sequence>
+      ))}
       
+      {/* Captions overlay */}
       {currentCaption && (
         <AbsoluteFill style={{ justifyContent: 'flex-end', alignItems: 'center', paddingBottom: 100 }}>
             {style === 'standard' && (

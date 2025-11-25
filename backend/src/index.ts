@@ -5,6 +5,7 @@ import path from "path";
 import uploadRoutes from "./routes/upload";
 import transcribeRoutes from "./routes/transcribe";
 import renderRoutes from "./routes/render";
+import pexelsRoutes from "./routes/pexels";
 
 // Polyfill File API for Node.js < 20 (OpenAI SDK requirement)
 // This ensures OpenAI SDK works even if Node version doesn't have File globally
@@ -53,6 +54,7 @@ app.use(
 app.use("/api/upload", uploadRoutes);
 app.use("/api/transcribe", transcribeRoutes);
 app.use("/api/render", renderRoutes);
+app.use("/api/pexels", pexelsRoutes);
 
 // Health check endpoint
 app.get("/", (req, res) => {

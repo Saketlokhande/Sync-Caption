@@ -49,7 +49,7 @@ async function getBundle(): Promise<string> {
 export { getBundle };
 
 router.post("/", async (req, res) => {
-  const { videoUrl, captions, style, duration, dimensions } = req.body;
+  const { videoUrl, captions, style, duration, dimensions, brollSegments } = req.body;
 
   if (!videoUrl || !captions) {
     return res.status(400).json({ error: "Missing videoUrl or captions" });
@@ -101,6 +101,7 @@ router.post("/", async (req, res) => {
         videoUrl: videoUrlForRemotion,
         captions,
         style: style || "standard",
+        brollSegments: brollSegments || [],
       },
     });
     console.log(
@@ -141,6 +142,7 @@ router.post("/", async (req, res) => {
         videoUrl: videoUrlForRemotion,
         captions,
         style: style || "standard",
+        brollSegments: brollSegments || [],
       },
       timeoutInMilliseconds: 900000, // 15 minutes timeout (to allow for longer renders)
       concurrency: 1,
