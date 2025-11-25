@@ -9,7 +9,13 @@ import {
   AlertCircle,
   ChevronDown,
 } from "lucide-react";
-import { uploadVideo, transcribeVideo, renderVideo, BrollSegment, PexelsVideo } from "../../lib/api";
+import {
+  uploadVideo,
+  transcribeVideo,
+  renderVideo,
+  BrollSegment,
+  PexelsVideo,
+} from "../../lib/api";
 import { RemotionPlayer } from "../../components/Player";
 import { Button } from "../components/ui/Button";
 import {
@@ -44,15 +50,31 @@ export default function Home() {
     width: number;
     height: number;
   }>({ width: 1080, height: 1920 });
-  const [selectedPexelsVideo, setSelectedPexelsVideo] = useState<PexelsVideo | null>(null);
+  const [selectedPexelsVideo, setSelectedPexelsVideo] =
+    useState<PexelsVideo | null>(null);
   const [brollSegments, setBrollSegments] = useState<BrollSegment[]>([]);
-  const [renderedVideoFilename, setRenderedVideoFilename] = useState<string>("");
+  const [renderedVideoFilename, setRenderedVideoFilename] =
+    useState<string>("");
 
   const handleFileSelect = async (selectedFile: File) => {
+    // Revoke previous video URL to prevent memory leaks
+    if (videoUrl && videoUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(videoUrl);
+    }
+
+    // Reset all state for new video
+    setCaptions([]);
+    setDownloadUrl("");
+    setSelectedPexelsVideo(null);
+    setBrollSegments([]);
+    setRenderedVideoFilename("");
+    setError("");
+    setStatus("");
+
+    // Set new file and create URL
     setFile(selectedFile);
     const url = URL.createObjectURL(selectedFile);
     setVideoUrl(url);
-    setError("");
 
     // Get video duration and dimensions
     const video = document.createElement("video");
@@ -86,7 +108,7 @@ export default function Home() {
     // Use rendered video filename if available (for re-transcription), otherwise use original filename
     const videoToTranscribe = renderedVideoFilename || filename;
     if (!videoToTranscribe) return;
-    
+
     setLoading(true);
     setStatus("Generating captions...");
     setError("");
@@ -512,7 +534,9 @@ export default function Home() {
                       </p>
                       <button
                         onClick={() => {
-                          const filename = downloadUrl.split("/").pop() || "captioned-video.mp4";
+                          const filename =
+                            downloadUrl.split("/").pop() ||
+                            "captioned-video.mp4";
                           handleDownload(downloadUrl, filename);
                         }}
                         className="block w-full text-center py-2 px-4 rounded-lg text-sm font-medium text-white transition-all duration-300 cursor-pointer"

@@ -80,11 +80,13 @@ export const BrollEditor: React.FC<BrollEditorProps> = ({
       return;
     }
 
-    onSegmentsChange([...brollSegments, newSegment].sort((a, b) => {
-      const aStart = a.startMinutes * 60 + a.startSeconds;
-      const bStart = b.startMinutes * 60 + b.startSeconds;
-      return aStart - bStart;
-    }));
+    onSegmentsChange(
+      [...brollSegments, newSegment].sort((a, b) => {
+        const aStart = a.startMinutes * 60 + a.startSeconds;
+        const bStart = b.startMinutes * 60 + b.startSeconds;
+        return aStart - bStart;
+      })
+    );
 
     // Reset inputs
     setStartMinutes("");
@@ -246,12 +248,8 @@ export const BrollEditor: React.FC<BrollEditorProps> = ({
                     <div className="w-2 h-2 rounded-full bg-primary" />
                     <div>
                       <div className="text-sm font-medium">
-                        {formatTime(
-                          segment.startMinutes,
-                          segment.startSeconds
-                        )}{" "}
-                        -{" "}
-                        {formatTime(segment.endMinutes, segment.endSeconds)}
+                        {formatTime(segment.startMinutes, segment.startSeconds)}{" "}
+                        - {formatTime(segment.endMinutes, segment.endSeconds)}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         Duration:{" "}
@@ -279,4 +277,3 @@ export const BrollEditor: React.FC<BrollEditorProps> = ({
     </Card>
   );
 };
-
