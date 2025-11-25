@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Search, Play, Loader2, X } from "lucide-react";
+import { Search, Play, Loader2 } from "lucide-react";
 import { searchPexelsVideos, PexelsVideo } from "../../../lib/api";
 import { Button } from "./Button";
 import { Input } from "./Input";
@@ -117,7 +117,7 @@ export const PexelsSearch: React.FC<PexelsSearchProps> = ({
           <h3 className="text-sm font-medium text-muted-foreground">
             Search Results ({videos.length})
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto scrollbar-hide">
             {videos.map((video) => {
               const videoFile = getBestVideoFile(video);
               const isSelected = selectedVideoId === video.id;
@@ -188,5 +188,3 @@ export const PexelsSearch: React.FC<PexelsSearchProps> = ({
     </div>
   );
 };
-
-

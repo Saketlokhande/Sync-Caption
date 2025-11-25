@@ -236,7 +236,7 @@ export const BrollEditor: React.FC<BrollEditorProps> = ({
         {brollSegments.length > 0 && (
           <div className="space-y-2">
             <h4 className="text-sm font-medium">B-roll Segments</h4>
-            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+            <div className="space-y-2 max-h-[300px] overflow-y-auto scrollbar-hide">
               {brollSegments.map((segment, index) => (
                 <div
                   key={index}
